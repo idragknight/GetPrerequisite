@@ -20,7 +20,6 @@ This script automatically:
 ## Requirements
 
 - Skua (latest version)
-- Access to required quests (storylines not farmed by this script)
 
 ---
 
