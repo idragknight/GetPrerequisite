@@ -30,18 +30,6 @@ One‑click script to farm, rank, and equip everything needed for **Ultras-v3** 
 3. Restart Skua.
 
 ---
-
-## Configuration
-
-Two options (toggle in Skua before running):
-
-| Option | Default |
-|--------|---------|
-| AutoEquipBoosts | `true` |
-| FarmMissingBoosts | `true` |
-
----
-
 ## Usage
 
 Run the script. It will:
@@ -52,5 +40,3 @@ Run the script. It will:
 - Display a final status table and stop.
 
 ---
-
-## Dependencies (cs_include)
