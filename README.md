@@ -10,9 +10,7 @@ One‑click script to farm, rank, and equip everything needed for **Ultras-v3** 
 - Unlocks Lord of Order (completes dailies, ranks to 10).
 - Farms Alchemy (rank 8) and Good (rank 10) reputations.
 - Unlocks all required forge enhancements (Lacerate, Praxis, Helm, Cape).
-- Auto‑equips best 40%+ weapon and 30%+ tagged armor/pet from inventory/bank.
 - Optionally farms Hollowborn Reaper's Scythe (51% all) and/or Polly Roger (30% tagged) if missing.
-- Logs progress and stops cleanly after a final status report.
 
 ---
 
