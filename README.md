@@ -46,8 +46,8 @@ Two options (toggle in Skua before running):
 ## Usage
 
 1. Open Skua and navigate to the script (`Ultrasv3/DependenciesUltras`).
-2. Set the options as desired.
-3. Click **Run**.
+2. Click **Star Script**.
+3. Set the options as desired.
 4. The script will:
    - Show a progress check.
    - **Do Lord of Order daily quests first** (if not already completed/rank 10).
