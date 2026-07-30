@@ -54,3 +54,9 @@ Two options (toggle in Skua before running):
    - Farm missing classes, reputations, and forge tiers.
    - Auto‑equip boost items (and farm fallbacks if enabled).
    - Display a final status table and stop.
+
+---
+
+## ⚠️ Disclaimer
+
+**Use at your own risk.** Botting may violate the Terms of Service of AdventureQuest Worlds (AQW). This script is provided for **educational and informational purposes only**. The author is not responsible for any account actions taken by Artix Entertainment, including but not limited to warnings, suspensions, or bans. By using this script, you accept full responsibility for your actions.
