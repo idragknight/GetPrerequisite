@@ -1,6 +1,6 @@
 # Get Prereq Classes and Forge Enhancements
 
-One‑click script to farm, rank, and equip everything needed for **Ultras-v3** challenges in AQW.
+A Vibe One‑click script to farm, rank, and equip everything needed for **Ultras-v3** challenges in AQW.
 
 ---
 
