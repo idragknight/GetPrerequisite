@@ -63,7 +63,7 @@ This script automatically prepares your account for any Ultra boss by:
 ## Usage
 
 1. Open Skua → navigate to the script (`Ultrasv3/DependenciesUltras`).
-2. Click **Star Script**.
+2. Click **Start Script**.
 3. Set the options as desired.
 4. Run the script – it will:
    - Show a progress check.
