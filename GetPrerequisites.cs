@@ -19,6 +19,7 @@ tags: prereq, prerequisites, forge, classes, ultras
 //cs_include Scripts/Enhancement/UnlockForgeEnhancements.cs
 //cs_include Scripts/Hollowborn/HollowbornReapersScythe.cs
 //cs_include Scripts/Seasonal/TalkLikeaPirateDay/CelestialPirateCommander[PollyRogers].cs
+//cs_include Scripts/Good/GearOfAwe/BladeOfAwe.cs
 
 using System;
 using System.Collections.Generic;
@@ -75,6 +76,10 @@ public class PrereqClassesAndForge
 
     private static CelestialPirateCommander CPC => _CPC ??= new();
     private static CelestialPirateCommander? _CPC;
+
+    // NEW: Blade of Awe (unlocks Awe enhancements)
+    private static BladeOfAwe BoA => _BoA ??= new();
+    private static BladeOfAwe? _BoA;
 
     private static readonly int[] LordOfOrderQuestIds =
     {
@@ -148,6 +153,12 @@ public class PrereqClassesAndForge
         return !Core.CheckInventory(className);
     }
 
+    // NEW: Check if Blade of Awe is owned (unlocks Awe enhancements)
+    private bool HasBladeOfAwe()
+    {
+        return Core.CheckInventory("Blade of Awe", toInv: true) || Core.CheckInventory("Blade of Awe");
+    }
+
     private int GetLordOfOrderProgress()
     {
         int count = 0;
@@ -179,7 +190,8 @@ public class PrereqClassesAndForge
             && Adv.uLacerate()
             && Adv.uPraxis()
             && Adv.uForgeHelm()
-            && Adv.uForgeCape();
+            && Adv.uForgeCape()
+            && HasBladeOfAwe();   // <-- NEW: ensures Awe enhancements are unlocked
     }
 
     // ─── ACQUISITION ──────────────────────────────────────────────────
@@ -291,6 +303,10 @@ public class PrereqClassesAndForge
         bool goodOk = goodRank >= 10;
         LogStatus("Good reputation", goodOk, goodOk ? "" : $"rank {goodRank}/10");
 
+        // NEW: Blade of Awe (unlocks Awe enhancements)
+        bool hasBoA = HasBladeOfAwe();
+        LogStatus("Blade of Awe (Awe enhancements)", hasBoA, hasBoA ? "" : "needs to be obtained");
+
         // Forge
         bool weaponDone = Adv.uLacerate() && Adv.uPraxis();
         bool helmDone = Adv.uForgeHelm();
@@ -329,6 +345,17 @@ public class PrereqClassesAndForge
         AcquireClass("ArchFiend", rankUp, () => AF.GetArchfiend(rankUp));
 
         GetReputation();
+
+        // NEW: Get Blade of Awe (unlocks Awe enhancements)
+        if (HasBladeOfAwe())
+        {
+            Core.Logger("Skipping Blade of Awe; already obtained.", "Info");
+        }
+        else
+        {
+            Core.Logger("[PrereqClassesAndForge] Getting Blade of Awe (unlocks Awe enhancements)...", "Info");
+            BoA.GetBoA(); // This farms rep to rank 6 and gets the blade
+        }
 
         Core.Logger("[PrereqClassesAndForge] Getting forge enhancements...", "Info");
         if (Adv.uLacerate() && Adv.uPraxis() && Adv.uForgeHelm() && Adv.uForgeCape())
@@ -658,8 +685,11 @@ public class PrereqClassesAndForge
         sb.AppendLine($"  {(goodOk ? "✅" : "❌")} Good: rank {goodRank}" + (goodOk ? "" : " (need rank 10)"));
         sb.AppendLine();
 
-        // Forge
-        sb.AppendLine("🔧 FORGE:");
+        // Forge & Awe
+        sb.AppendLine("🔧 FORGE & AWE:");
+        bool hasBoA = HasBladeOfAwe();
+        sb.AppendLine($"  {(hasBoA ? "✅" : "❌")} Blade of Awe (unlocks Awe enhancements)" + (hasBoA ? "" : " (needs farming)"));
+
         bool weaponDone = Adv.uLacerate() && Adv.uPraxis();
         sb.AppendLine($"  {(weaponDone ? "✅" : "❌")} Weapon: Lacerate & Praxis" + (weaponDone ? "" : " (not fully unlocked)"));
         bool helmDone = Adv.uForgeHelm();
