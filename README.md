@@ -1,19 +1,39 @@
 # Get Prereq Classes and Forge Enhancements
 
-A **Vibe** one‑click script to farm, rank, and equip everything needed for **Ultras-v3**.
+A **vibe-coded** one‑click script that farms, ranks, and equips everything needed for **Ultras-v3** challenges. No coding knowledge required – just press run.
 
 ---
 
 ## Overview
 
-This script automatically:
-- Checks which classes, reputations, forge tiers, and boost items you already have.
-- **Completes Lord of Order daily quests (and ranks to 10) first**, then proceeds to farm missing classes (Verus DoomKnight, Shaman, StoneCrusher, King's Echo, ArchPaladin, Dragon of Time, ArchFiend) and ranks them to 10.
-- Farms Alchemy (rank 8) and Good (rank 10) reputations.
-- Unlocks all required forge enhancements (Lacerate, Praxis, Helm, Cape).
-- Auto‑equips the best 40%+ all‑monster weapon and 30%+ tagged armor/pet from your inventory/bank.
-- Optionally farms Hollowborn Reaper's Scythe (40% all) and/or Polly Roger (30% tagged) if missing.
-- Logs progress and stops cleanly after a final status report.
+This script automatically prepares your account for any Ultra boss by:
+
+- **Checking** which classes, reputations, forge tiers, and boost items you already have.
+- **Farming and ranking** all required classes:
+  - Verus DoomKnight, Shaman, StoneCrusher, King's Echo, ArchPaladin, Dragon of Time, ArchFiend.
+  - **Lord of Order** is done **first** (daily quests + rank 10).
+- **Farming Alchemy (rank 8)** and **Good (rank 10)** reputations.
+- **Unlocking the minimum weapon enhancements** for all Ultras:
+  - **Blade of Awe** → unlocks **Health Vamp, Mana Vamp, Awe Blast**.
+  - **Lacerate** and **Praxis** from the Forge questline.
+- **Unlocking all helm and cape forge tiers**.
+- **Auto‑equipping** the best 40%+ all‑monster weapon and 30%+ tagged armor/pet from inventory/bank.
+- **Optionally farming** Hollowborn Reaper's Scythe (40% all) and/or Polly Roger (30% tagged) if no suitable boost items are found.
+- **Logging progress** and stopping cleanly after a final status report.
+
+---
+
+## What This Script Provides (Weapon Enhancements)
+
+| Enhancement | Unlocked Via | Used In |
+|-------------|--------------|---------|
+| **Lacerate** | Forge questline | Most taunters and DPS |
+| **Praxis** | Forge questline | ArchPaladin, Verus DoomKnight, supports |
+| **Health Vamp** | Blade of Awe | Dage, Gramiel, Kolr, etc. |
+| **Mana Vamp** | Blade of Awe | Many classes (primary or fallback) |
+| **Awe Blast** | Blade of Awe | Lord of Order, supports in Darkon/Tyndarius |
+
+> ✅ This is the **minimum required set** – enough to clear all Ultras. For optimal damage, consider farming Valiance, Elysium, etc. later.
 
 ---
 
@@ -33,25 +53,25 @@ This script automatically:
 
 ## Configuration
 
-Two options (toggle in Skua before running):
-
 | Option | Description | Default |
 |--------|-------------|---------|
-| AutoEquipBoosts | Equips the best all‑monster weapon and all‑race tagged armor/pet found in inventory/bank. | `false` |
-| FarmMissingBoosts | If no suitable boost item is found, farms Scythe (40% all) and/or Polly (30% tagged). If disabled, just recommends them. | `false` |
+| **AutoEquipBoosts** | Equips the best all‑monster weapon and all‑race tagged armor/pet from inventory/bank. | `false` |
+| **FarmMissingBoosts** | If no suitable boost is found, farms Scythe (40% all) and/or Polly (30% tagged). If disabled, just recommends them. | `false` |
 
 ---
 
 ## Usage
 
-1. Open Skua and navigate to the script (`Ultrasv3/DependenciesUltras`).
+1. Open Skua → navigate to the script (`Ultrasv3/DependenciesUltras`).
 2. Click **Star Script**.
 3. Set the options as desired.
-4. The script will:
+4. Run the script – it will:
    - Show a progress check.
-   - **Do Lord of Order daily quests first** (if not already completed/rank 10).
+   - **Do Lord of Order daily quests first** (if needed).
    - Farm missing classes, reputations, and forge tiers.
-   - Auto‑equip boost items (and farm fallbacks if enabled).
+   - Unlock Blade of Awe (Awe enhancements).
+   - Unlock Lacerate and Praxis.
+   - Handle boost items (auto‑equip or farm fallbacks).
    - Display a final status table and stop.
 
 ---
@@ -59,3 +79,7 @@ Two options (toggle in Skua before running):
 ## ⚠️ Disclaimer
 
 **Use at your own risk.** Botting may violate the Terms of Service of AdventureQuest Worlds (AQW). This script is provided for **educational and informational purposes only**. The author is not responsible for any account actions taken by Artix Entertainment, including but not limited to warnings, suspensions, or bans. By using this script, you accept full responsibility for your actions.
+
+---
+
+> Built with AI, driven by vibes. Good luck in Ultras-v3!
