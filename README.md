@@ -9,15 +9,15 @@ A **vibe-coded** one‑click script that farms, ranks, and equips everything nee
 This script automatically prepares your account for any Ultra boss by:
 
 - **Checking** which classes, reputations, forge tiers, and boost items you already have.
-- **Farming and ranking** all required classes:
-  - Verus DoomKnight, Shaman, StoneCrusher, King's Echo, ArchPaladin, Dragon of Time, ArchFiend.
+- **Farming and ranking up** all required classes:
   - **Lord of Order** is done **first** (daily quests + rank 10).
+  - Bard, Shaman, StoneCrusher, ArchPaladin, King's Echo, ArchFiend, Dragon Of Time, Verus DoomKnight.
 - **Farming Alchemy (rank 8)** and **Good (rank 10)** reputations.
 - **Unlocking the minimum weapon enhancements** for all Ultras:
   - **Blade of Awe** → unlocks **Health Vamp, Mana Vamp, Awe Blast**.
-  - **Lacerate** and **Praxis** from the Forge questline.
+  - **Lacerate**, **Praxis**, **Hero's Valiance** from the Forge questline.
 - **Unlocking all helm and cape forge tiers**.
-- **Auto‑equipping** the best 40%+ all‑monster weapon and 30%+ tagged armor/pet from inventory/bank.
+- **Auto‑equipping** the best %+ all‑monster weapon and %+ tagged armor/pet from inventory/bank.
 - **Optionally farming** Hollowborn Reaper's Scythe (40% all) and/or Polly Roger (30% tagged) if no suitable boost items are found.
 - **Logging progress** and stopping cleanly after a final status report.
 
