@@ -1,6 +1,6 @@
 /*
 name: Get Prereq Classes and Forge (Joe Flow)
-description: Standalone wrapper that farms prerequisites in the same order as FarmerJoeDoAll, with LoO first, Hero's Valiance in Forge Weapon, and boost equipment equipped before any farming.
+description: Standalone wrapper that farms prerequisites in a progression‑friendly order: LoO first, then easiest classes first, hardest last. Hero's Valiance integrated into Forge Weapon. Boost equipment equipped before any farming (if enabled).
 tags: prereq, prerequisites, forge, classes, ultras, joe, farmerjoe, bard, lordoforder, herovaliance
 */
 
@@ -60,14 +60,14 @@ public class GetPrerequisitesWithJoeFlow
         // ──────────── INITIAL STATUS REPORT ────────────
         Mgr.PrintInitialStatus();
 
-        // ──────────── EQUIP EXISTING BOOSTS (if enabled) ────────────
+        // ──────────── EQUIP EXISTING BOOSTS ────────────
         if (autoEquip)
         {
             Core.Logger("[Joe Flow] Auto‑equipping best boost items (existing only)...", "Info");
             Mgr.EquipBestBoostItems();
         }
 
-        // ──────────── PHASE 0: LORD OF ORDER (FIRST) ────────────
+        // ──────────── PHASE 0: LORD OF ORDER ────────────
         Core.Logger("[Joe Flow] Phase 0: Lord of Order – starting daily quests early", "Info");
         Mgr.EnsureLordOfOrder(rankUp: true);
 
@@ -79,11 +79,11 @@ public class GetPrerequisitesWithJoeFlow
         Mgr.EnsureArchPaladin(rankUp: true);
 
         // ──────────── PHASE 2: MID CLASSES ────────────
-        Core.Logger("[Joe Flow] Phase 2: Mid-tier classes", "Info");
-        Mgr.EnsureVerusDoomKnight(rankUp: true);
-        Mgr.EnsureDragonOfTime(rankUp: true);
+        Core.Logger("[Joe Flow] Phase 2: Mid‑tier classes (easy to hard)", "Info");
         Mgr.EnsureKingEcho(rankUp: true);
         Mgr.EnsureArchFiend(rankUp: true);
+        Mgr.EnsureDragonOfTime(rankUp: true);
+        Mgr.EnsureVerusDoomKnight(rankUp: true);
 
         // ──────────── PHASE 3: REPUTATIONS ────────────
         Core.Logger("[Joe Flow] Phase 3: Reputation farming (Alchemy & Good)", "Info");
@@ -93,9 +93,9 @@ public class GetPrerequisitesWithJoeFlow
         // ──────────── PHASE 4: FORGE, BLADE OF AWE, AND HERO'S VALIANCE ────────────
         Core.Logger("[Joe Flow] Phase 4: Forge, Blade of Awe, and Hero's Valiance", "Info");
         Mgr.EnsureBladeOfAwe();
-        Mgr.EnsureForgeEnhancements();      // now handles Lacerate, Praxis, and Hero's Valiance together
+        Mgr.EnsureForgeEnhancements();
 
-        // ──────────── PHASE 5: FARM MISSING BOOSTS (if enabled) ────────────
+        // ──────────── PHASE 5: FARM MISSING BOOSTS ────────────
         if (farmMissing)
         {
             Core.Logger("[Joe Flow] Phase 5: Farming missing boost items...", "Info");
@@ -231,7 +231,6 @@ public class PrerequisiteManager
     private int ReputationRank(string repName) => Bot.Reputation.GetRank(repName);
     private bool HasReputation(string repName, int requiredRank) => ReputationRank(repName) >= requiredRank;
 
-    // Combined check for all three weapon forge enhancements
     private bool AreForgeWeaponsComplete()
     {
         return Adv.uLacerate() && Adv.uPraxis() && Adv.uValiance();
@@ -391,7 +390,6 @@ public class PrerequisiteManager
         Core.Logger("[PrereqMgr] Doing forge enhancements (including Hero's Valiance)...", "Info");
         Forge.ForgeUnlocks();
 
-        // After ForgeUnlocks, check if Valiance is still missing and log a warning
         if (!Adv.uValiance())
         {
             Core.Logger("[PrereqMgr] Hero's Valiance not unlocked by ForgeUnlocks; may need manual unlocking.", "Warning");
@@ -712,7 +710,7 @@ public class PrerequisiteManager
         string ign = Core.Username();
 
         var sb = new StringBuilder();
-        sb.AppendLine($"✅ ULTRAS PREREQUISITE STATUS – {ign}");
+        sb.AppendLine($"✅ ULTRAS‑V3 PREREQUISITE STATUS – {ign}");
         sb.AppendLine();
 
         sb.AppendLine("📚 CLASSES:");
@@ -785,7 +783,8 @@ public class PrerequisiteManager
             if (!weaponsComplete) sb.AppendLine("  • Unlock Lacerate, Praxis, and Hero's Valiance (forge progression)");
         }
         else
-            sb.AppendLine("🎉 All good – proceed to Ultras!");
-        Bot.ShowMessageBox(sb.ToString(), "Ultras Prerequisites (Joe Flow)");
+            sb.AppendLine("🎉 All good – proceed to Ultras v3!");
+
+        Bot.ShowMessageBox(sb.ToString(), "Ultras-v3 Prerequisites (Joe Flow)");
     }
 }
