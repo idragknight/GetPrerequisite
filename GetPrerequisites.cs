@@ -1,11 +1,12 @@
 /*
-name: Get Prereq Classes and Forge Enhancements
-description: Standalone wrapper that uses the existing class and forge prerequisite scripts for Ultras v3.
-tags: prereq, prerequisites, forge, classes, ultras
+name: Get Prereq Classes and Forge (Joe Flow)
+description: Standalone wrapper that farms prerequisites in the same order as FarmerJoeDoAll, with LoO first, Hero's Valiance in Forge Weapon, and boost equipment equipped before any farming.
+tags: prereq, prerequisites, forge, classes, ultras, joe, farmerjoe, bard, lordoforder, herovaliance
 */
 
 //cs_include Scripts/CoreBots.cs
 //cs_include Scripts/CoreAdvanced.cs
+//cs_include Scripts/CoreFarms.cs
 //cs_include Scripts/Other/Classes/VerusDoomKnight.cs
 //cs_include Scripts/Other/Classes/REP-based/Shaman.cs
 //cs_include Scripts/Other/Classes/REP-based/StoneCrusher.cs
@@ -20,6 +21,7 @@ tags: prereq, prerequisites, forge, classes, ultras
 //cs_include Scripts/Hollowborn/HollowbornReapersScythe.cs
 //cs_include Scripts/Seasonal/TalkLikeaPirateDay/CelestialPirateCommander[PollyRogers].cs
 //cs_include Scripts/Good/GearOfAwe/BladeOfAwe.cs
+//cs_include Scripts/Other/Classes/REP-based/Bard.cs
 
 using System;
 using System.Collections.Generic;
@@ -29,7 +31,90 @@ using Skua.Core.Interfaces;
 using Skua.Core.Models.Items;
 using Skua.Core.Options;
 
-public class PrereqClassesAndForge
+public class GetPrerequisitesWithJoeFlow
+{
+    private IScriptInterface Bot => IScriptInterface.Instance;
+    private CoreBots Core => CoreBots.Instance;
+    private PrerequisiteManager Mgr => _mgr ??= new PrerequisiteManager();
+    private PrerequisiteManager? _mgr;
+
+    public string OptionsStorage = "PrereqOptions";
+    public bool DontPreconfigure = true;
+
+    public List<IOption> Options = new()
+    {
+        new Option<bool>("AutoEquipBoosts", "Auto-Equip Best Boosts",
+            "Equips the best all‑monster weapon and all‑race armor/pet immediately at the start (if they exist).", false),
+        new Option<bool>("FarmMissingBoosts", "Farm Missing Boost Items",
+            "If no suitable boost item is found, farms Hollowborn Reaper's Scythe (40% all) and/or Polly Roger (30% all tagged) at the very end of the script.", false),
+        CoreBots.Instance.SkipOptions,
+    };
+
+    public void ScriptMain(IScriptInterface bot)
+    {
+        Core.SetOptions();
+
+        bool autoEquip = Bot.Config!.Get<bool>("AutoEquipBoosts");
+        bool farmMissing = Bot.Config!.Get<bool>("FarmMissingBoosts");
+
+        // ──────────── INITIAL STATUS REPORT ────────────
+        Mgr.PrintInitialStatus();
+
+        // ──────────── EQUIP EXISTING BOOSTS (if enabled) ────────────
+        if (autoEquip)
+        {
+            Core.Logger("[Joe Flow] Auto‑equipping best boost items (existing only)...", "Info");
+            Mgr.EquipBestBoostItems();
+        }
+
+        // ──────────── PHASE 0: LORD OF ORDER (FIRST) ────────────
+        Core.Logger("[Joe Flow] Phase 0: Lord of Order – starting daily quests early", "Info");
+        Mgr.EnsureLordOfOrder(rankUp: true);
+
+        // ──────────── PHASE 1: EARLY CLASSES ────────────
+        Core.Logger("[Joe Flow] Phase 1: Early core classes", "Info");
+        Mgr.EnsureBard(rankUp: true);
+        Mgr.EnsureShaman(rankUp: true);
+        Mgr.EnsureStoneCrusher(rankUp: true);
+        Mgr.EnsureArchPaladin(rankUp: true);
+
+        // ──────────── PHASE 2: MID CLASSES ────────────
+        Core.Logger("[Joe Flow] Phase 2: Mid-tier classes", "Info");
+        Mgr.EnsureVerusDoomKnight(rankUp: true);
+        Mgr.EnsureDragonOfTime(rankUp: true);
+        Mgr.EnsureKingEcho(rankUp: true);
+        Mgr.EnsureArchFiend(rankUp: true);
+
+        // ──────────── PHASE 3: REPUTATIONS ────────────
+        Core.Logger("[Joe Flow] Phase 3: Reputation farming (Alchemy & Good)", "Info");
+        Mgr.EnsureAlchemyReputation(8);
+        Mgr.EnsureGoodReputation(10);
+
+        // ──────────── PHASE 4: FORGE, BLADE OF AWE, AND HERO'S VALIANCE ────────────
+        Core.Logger("[Joe Flow] Phase 4: Forge, Blade of Awe, and Hero's Valiance", "Info");
+        Mgr.EnsureBladeOfAwe();
+        Mgr.EnsureForgeEnhancements();      // now handles Lacerate, Praxis, and Hero's Valiance together
+
+        // ──────────── PHASE 5: FARM MISSING BOOSTS (if enabled) ────────────
+        if (farmMissing)
+        {
+            Core.Logger("[Joe Flow] Phase 5: Farming missing boost items...", "Info");
+            Mgr.FarmMissingBoostItems(equipAfterFarming: autoEquip);
+        }
+
+        // ──────────── FINAL STATUS REPORT ────────────
+        Mgr.PrintFinalStatus();
+
+        Core.SetOptions(false);
+        Bot.Stop();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// PREREQUISITE MANAGER – holds all logic
+// ─────────────────────────────────────────────────────────────
+
+public class PrerequisiteManager
 {
     private IScriptInterface Bot => IScriptInterface.Instance;
     private CoreBots Core => CoreBots.Instance;
@@ -40,46 +125,34 @@ public class PrereqClassesAndForge
 
     private static VerusDoomKnightClass VDK => _VDK ??= new();
     private static VerusDoomKnightClass? _VDK;
-
     private static Shaman Sham => _Sham ??= new();
     private static Shaman? _Sham;
-
     private static StoneCrusher SC => _SC ??= new();
     private static StoneCrusher? _SC;
-
     private static KingsEcho KE => _KE ??= new();
     private static KingsEcho? _KE;
-
     private static ArchPaladin AP => _AP ??= new();
     private static ArchPaladin? _AP;
-
     private static DragonOfTime DoT => _DoT ??= new();
     private static DragonOfTime? _DoT;
-
     private static ArchFiend AF => _AF ??= new();
     private static ArchFiend? _AF;
-
     private static UnlockForgeEnhancements Forge => _Forge ??= new();
     private static UnlockForgeEnhancements? _Forge;
-
     private static LordOfOrder LOO => _LOO ??= new();
     private static LordOfOrder? _LOO;
-
     private static AlchemyREP AlchemyRep => _AlchemyRep ??= new();
     private static AlchemyREP? _AlchemyRep;
-
     private static GoodREP GoodRep => _GoodRep ??= new();
     private static GoodREP? _GoodRep;
-
     private static HollowbornScythe HBS => _HBS ??= new();
     private static HollowbornScythe? _HBS;
-
     private static CelestialPirateCommander CPC => _CPC ??= new();
     private static CelestialPirateCommander? _CPC;
-
-    // NEW: Blade of Awe (unlocks Awe enhancements)
     private static BladeOfAwe BoA => _BoA ??= new();
     private static BladeOfAwe? _BoA;
+    private static Bard BardInstance => _BardInstance ??= new();
+    private static Bard? _BardInstance;
 
     private static readonly int[] LordOfOrderQuestIds =
     {
@@ -88,6 +161,7 @@ public class PrereqClassesAndForge
 
     private static readonly string[] RequiredClasses =
     [
+        "Bard",
         "Verus DoomKnight",
         "Shaman",
         "StoneCrusher",
@@ -108,25 +182,10 @@ public class PrereqClassesAndForge
         ItemCategory.Whip
     ];
 
-    private readonly List<string> _messageLines = new();
-
-    public string OptionsStorage = "PrereqOptions";
-    public bool DontPreconfigure = true;
-
-    public List<IOption> Options = new()
-    {
-        new Option<bool>("AutoEquipBoosts", "Auto-Equip Best Boosts",
-            "Automatically equips the best all monster weapon and all race tagged armor/pet found in inventory/bank.", false),
-        new Option<bool>("FarmMissingBoosts", "Farm Missing Boost Items",
-            "If no suitable boost item is found, farms Hollowborn Reaper's Scythe (40% all monster) and/or Polly Roger (30% all tagged). If false, just recommends them.", false),
-        CoreBots.Instance.SkipOptions,
-    };
-
     // ─── HELPERS ──────────────────────────────────────────────────────
 
     private float NormaliseBoost(float raw) => raw > 1f ? raw - 1f : raw;
 
-    // Returns true if class is owned and rank >= 9 (rank 10)
     private bool IsClassComplete(string className)
     {
         Core.Unbank(className);
@@ -136,7 +195,6 @@ public class PrereqClassesAndForge
         return rank >= 9;
     }
 
-    // Returns true if class is owned and rank < 9 (needs ranking up)
     private bool ShouldRankUpClass(string className)
     {
         Core.Unbank(className);
@@ -146,14 +204,12 @@ public class PrereqClassesAndForge
         return rank < 9;
     }
 
-    // Returns true if class is not owned at all
     private bool IsClassMissing(string className)
     {
         Core.Unbank(className);
         return !Core.CheckInventory(className);
     }
 
-    // NEW: Check if Blade of Awe is owned (unlocks Awe enhancements)
     private bool HasBladeOfAwe()
     {
         return Core.CheckInventory("Blade of Awe", toInv: true) || Core.CheckInventory("Blade of Awe");
@@ -175,6 +231,12 @@ public class PrereqClassesAndForge
     private int ReputationRank(string repName) => Bot.Reputation.GetRank(repName);
     private bool HasReputation(string repName, int requiredRank) => ReputationRank(repName) >= requiredRank;
 
+    // Combined check for all three weapon forge enhancements
+    private bool AreForgeWeaponsComplete()
+    {
+        return Adv.uLacerate() && Adv.uPraxis() && Adv.uValiance();
+    }
+
     private bool AllPrereqsComplete()
     {
         return IsLordOfOrderComplete()
@@ -185,28 +247,26 @@ public class PrereqClassesAndForge
             && IsClassComplete("ArchPaladin")
             && IsClassComplete("Dragon of Time")
             && IsClassComplete("ArchFiend")
+            && IsClassComplete("Bard")
             && HasReputation("Alchemy", 8)
             && HasReputation("Good", 10)
-            && Adv.uLacerate()
-            && Adv.uPraxis()
+            && AreForgeWeaponsComplete()
             && Adv.uForgeHelm()
             && Adv.uForgeCape()
-            && HasBladeOfAwe();   // <-- NEW: ensures Awe enhancements are unlocked
+            && HasBladeOfAwe();
     }
 
-    // ─── ACQUISITION ──────────────────────────────────────────────────
+    // ─── ACQUISITION HELPERS ─────────────────────────────────────────
 
     private void AcquireClass(string className, bool rankUp, Action getClass, Action? rankUpAction = null)
     {
         Core.Unbank(className);
 
-        // 1. If class is missing, farm it
         if (IsClassMissing(className))
         {
-            Core.Logger($"[PrereqClassesAndForge] Doing {className} class...", "Info");
+            Core.Logger($"[PrereqMgr] Doing {className} class...", "Info");
             getClass();
         }
-        // 2. If class is owned but not rank 10, rank it up
         else if (rankUp && ShouldRankUpClass(className))
         {
             Core.Logger($"Ranking up {className} to rank 10...", "Info");
@@ -215,283 +275,134 @@ public class PrereqClassesAndForge
             else
                 Adv.RankUpClass(className);
         }
-        // 3. If class is owned and rank 10, skip
         else if (IsClassComplete(className))
         {
             Core.Logger($"Skipping {className}; already owned and rank 10.", "Info");
         }
-        // Fallback: if something went wrong, try farming
         else
         {
-            Core.Logger($"[PrereqClassesAndForge] Doing {className} class...", "Info");
+            Core.Logger($"[PrereqMgr] Doing {className} class...", "Info");
             getClass();
         }
     }
 
-    // ─── PUBLIC METHODS ──────────────────────────────────────────────
+    // ─── PUBLIC ENSURE METHODS ──────────────────────────────────────
 
-    public void ScriptMain(IScriptInterface bot)
+    public void EnsureBard(bool rankUp = true)
     {
-        Core.SetOptions();
-
-        if (Bot.Bank.Items == null || Bot.Bank.Items.Count == 0)
-        {
-            Bot.Bank.Load();
-            Bot.Wait.ForTrue(() => (Bot.Bank.Items?.Count ?? 0) > 0, 20);
-        }
-
-        PrintProgress();
-
-        bool autoEquip = Bot.Config!.Get<bool>("AutoEquipBoosts");
-        bool farmMissing = Bot.Config!.Get<bool>("FarmMissingBoosts");
-
-        if (AllPrereqsComplete())
-        {
-            Core.Logger("[PrereqClassesAndForge] All prerequisite classes and forge enhancements are already complete. Nothing to do.", "Info");
-            if (autoEquip || farmMissing)
-                HandleBoostItems(autoEquip, farmMissing);
-            ShowPostPrereqPrompt();
-            Core.SetOptions(false);
-            Bot.Stop();
-            return;
-        }
-
-        GetAll();
-
-        if (autoEquip || farmMissing)
-            HandleBoostItems(autoEquip, farmMissing);
-
-        ShowPostPrereqPrompt();
-        Core.SetOptions(false);
-        Bot.Stop();
+        AcquireClass("Bard", rankUp, () => BardInstance.GetBard(rankUpClass: rankUp));
     }
 
-    public void PrintProgress()
+    public void EnsureVerusDoomKnight(bool rankUp = true)
     {
-        Core.Logger("[PrereqClassesAndForge] Progress check:", "Info");
-        _messageLines.Clear();
-
-        void LogStatus(string name, bool complete, string detail = "")
-        {
-            string line = complete ? $"✓ {name}: complete (rank 10)" : $"• {name}: needs to be done (rank 9)";
-            if (!complete && !string.IsNullOrEmpty(detail))
-                line += $" — {detail}";
-            _messageLines.Add(line);
-            Core.Logger(line, complete ? "Info" : "Warning");
-        }
-
-        // Classes – check ownership and rank
-        LogStatus("Verus DoomKnight", IsClassComplete("Verus DoomKnight"));
-        LogStatus("Shaman", IsClassComplete("Shaman"));
-        LogStatus("StoneCrusher", IsClassComplete("StoneCrusher"));
-        LogStatus("King's Echo", IsClassComplete("King's Echo"));
-        LogStatus("ArchPaladin", IsClassComplete("ArchPaladin"));
-        LogStatus("Dragon of Time", IsClassComplete("Dragon of Time"));
-        LogStatus("ArchFiend", IsClassComplete("ArchFiend"));
-
-        // Lord Of Order
-        bool looComplete = IsLordOfOrderComplete();
-        string looDetail = looComplete ? "" : $"{GetLordOfOrderProgress()}/{LordOfOrderQuestIds.Length} quests done";
-        LogStatus("Lord Of Order", looComplete, looDetail);
-
-        // Reputations
-        int alchRank = ReputationRank("Alchemy");
-        bool alchOk = alchRank >= 8;
-        LogStatus("Alchemy reputation", alchOk, alchOk ? "" : $"rank {alchRank}/8");
-
-        int goodRank = ReputationRank("Good");
-        bool goodOk = goodRank >= 10;
-        LogStatus("Good reputation", goodOk, goodOk ? "" : $"rank {goodRank}/10");
-
-        // NEW: Blade of Awe (unlocks Awe enhancements)
-        bool hasBoA = HasBladeOfAwe();
-        LogStatus("Blade of Awe (Awe enhancements)", hasBoA, hasBoA ? "" : "needs to be obtained");
-
-        // Forge
-        bool weaponDone = Adv.uLacerate() && Adv.uPraxis();
-        bool helmDone = Adv.uForgeHelm();
-        bool capeDone = Adv.uForgeCape();
-        LogStatus("Forge weapon enhancements", weaponDone);
-        LogStatus("Forge helm enhancements", helmDone);
-        LogStatus("Forge cape enhancements", capeDone);
-
-        // Optional
-        LogStatus("Hollowborn Reaper's Scythe (optional)", Core.CheckInventory("Hollowborn Reaper's Scythe"));
-        LogStatus("Polly Roger (optional)", Core.CheckInventory("Polly Roger"));
+        AcquireClass("Verus DoomKnight", rankUp, () => VDK.GetClass(rankup: rankUp));
     }
 
-    public void GetAll(bool rankUp = true)
+    public void EnsureShaman(bool rankUp = true)
     {
-        Core.Logger("[PrereqClassesAndForge] Getting prerequisite classes...", "Info");
+        AcquireClass("Shaman", rankUp, () => Sham.GetShaman(rankUpClass: rankUp));
+    }
 
+    public void EnsureStoneCrusher(bool rankUp = true)
+    {
+        AcquireClass("StoneCrusher", rankUp, () => SC.GetSC(rankUpClass: rankUp));
+    }
+
+    public void EnsureKingEcho(bool rankUp = true)
+    {
+        AcquireClass("King's Echo", rankUp, () => KE.GetKE(rankup: rankUp));
+    }
+
+    public void EnsureArchPaladin(bool rankUp = true)
+    {
+        AcquireClass("ArchPaladin", rankUp, () => AP.GetAP(rankUpClass: rankUp));
+    }
+
+    public void EnsureDragonOfTime(bool rankUp = true)
+    {
+        AcquireClass("Dragon of Time", rankUp, () => DoT.GetDoT(rankUpClass: rankUp));
+    }
+
+    public void EnsureArchFiend(bool rankUp = true)
+    {
+        AcquireClass("ArchFiend", rankUp, () => AF.GetArchfiend(rankUp));
+    }
+
+    public void EnsureLordOfOrder(bool rankUp = true)
+    {
         if (IsLordOfOrderComplete())
         {
             Core.Logger("Skipping Lord Of Order; already complete.", "Info");
+            return;
         }
-        else
+        Core.Logger("[PrereqMgr] Doing Lord Of Order daily class (start as early as possible)...", "Info");
+        LOO.GetLoO(rankUp);
+    }
+
+    public void EnsureAlchemyReputation(int targetRank = 8)
+    {
+        int alchRank = ReputationRank("Alchemy");
+        if (alchRank >= targetRank)
         {
-            int looProgress = GetLordOfOrderProgress();
-            Core.Logger($"[PrereqClassesAndForge] Lord Of Order progress: {looProgress}/{LordOfOrderQuestIds.Length}", "Info");
-            Core.Logger("[PrereqClassesAndForge] Doing Lord Of Order daily class first...", "Info");
-            LOO.GetLoO(rankUp);
+            Core.Logger($"Skipping Alchemy reputation; already rank {alchRank} (>= {targetRank}).", "Info");
+            return;
         }
+        Core.Logger($"[PrereqMgr] Getting Alchemy reputation to rank {targetRank} (current: {alchRank})...", "Info");
+        AlchemyRep.ScriptMain(Bot);
+        Core.SetOptions();
+    }
 
-        AcquireClass("Verus DoomKnight", rankUp, () => VDK.GetClass(rankup: rankUp));
-        AcquireClass("Shaman", rankUp, () => Sham.GetShaman(rankUpClass: rankUp));
-        AcquireClass("StoneCrusher", rankUp, () => SC.GetSC(rankUpClass: rankUp));
-        AcquireClass("King's Echo", rankUp, () => KE.GetKE(rankup: rankUp));
-        AcquireClass("ArchPaladin", rankUp, () => AP.GetAP(rankUpClass: rankUp));
-        AcquireClass("Dragon of Time", rankUp, () => DoT.GetDoT(rankUpClass: rankUp));
-        AcquireClass("ArchFiend", rankUp, () => AF.GetArchfiend(rankUp));
+    public void EnsureGoodReputation(int targetRank = 10)
+    {
+        int goodRank = ReputationRank("Good");
+        if (goodRank >= targetRank)
+        {
+            Core.Logger($"Skipping Good reputation; already rank {goodRank} (>= {targetRank}).", "Info");
+            return;
+        }
+        Core.Logger($"[PrereqMgr] Getting Good reputation to rank {targetRank} (current: {goodRank})...", "Info");
+        GoodRep.ScriptMain(Bot);
+        Core.SetOptions();
+    }
 
-        GetReputation();
-
-        // NEW: Get Blade of Awe (unlocks Awe enhancements)
+    public void EnsureBladeOfAwe()
+    {
         if (HasBladeOfAwe())
         {
             Core.Logger("Skipping Blade of Awe; already obtained.", "Info");
+            return;
         }
-        else
-        {
-            Core.Logger("[PrereqClassesAndForge] Getting Blade of Awe (unlocks Awe enhancements)...", "Info");
-            BoA.GetBoA(); // This farms rep to rank 6 and gets the blade
-        }
-
-        Core.Logger("[PrereqClassesAndForge] Getting forge enhancements...", "Info");
-        if (Adv.uLacerate() && Adv.uPraxis() && Adv.uForgeHelm() && Adv.uForgeCape())
-        {
-            Core.Logger("Skipping forge enhancements; all required forge tiers are already unlocked.", "Info");
-        }
-        else
-        {
-            Core.Logger("[PrereqClassesAndForge] Doing forge enhancements...", "Info");
-            Forge.ForgeUnlocks();
-        }
+        Core.Logger("[PrereqMgr] Getting Blade of Awe (unlocks Awe enhancements)...", "Info");
+        BoA.GetBoA();
     }
 
-    public void GetClassesOnly(bool rankUp = true)
+    public void EnsureForgeEnhancements()
     {
-        AcquireClass("Verus DoomKnight", rankUp, () => VDK.GetClass(rankup: rankUp));
-        AcquireClass("Shaman", rankUp, () => Sham.GetShaman(rankUpClass: rankUp));
-        AcquireClass("StoneCrusher", rankUp, () => SC.GetSC(rankUpClass: rankUp));
-        AcquireClass("King's Echo", rankUp, () => KE.GetKE(rankup: rankUp));
-        AcquireClass("ArchPaladin", rankUp, () => AP.GetAP(rankUpClass: rankUp));
-        AcquireClass("Dragon of Time", rankUp, () => DoT.GetDoT(rankUpClass: rankUp));
-        AcquireClass("ArchFiend", rankUp, () => AF.GetArchfiend(rankUp));
-    }
+        bool weaponsComplete = AreForgeWeaponsComplete();
+        bool helmComplete = Adv.uForgeHelm();
+        bool capeComplete = Adv.uForgeCape();
 
-    public void GetReputation()
-    {
-        int alchRank = ReputationRank("Alchemy");
-        if (alchRank >= 8)
+        if (weaponsComplete && helmComplete && capeComplete)
         {
-            Core.Logger("Skipping Alchemy reputation; already rank 8 or higher.", "Info");
-        }
-        else
-        {
-            Core.Logger($"[PrereqClassesAndForge] Getting Alchemy reputation to rank 8 (current rank: {alchRank})...", "Info");
-            AlchemyRep.ScriptMain(Bot);
-            Core.SetOptions();
+            Core.Logger("Skipping forge enhancements; all required forge tiers (including Hero's Valiance) are already unlocked.", "Info");
+            return;
         }
 
-        int goodRank = ReputationRank("Good");
-        if (goodRank >= 10)
-        {
-            Core.Logger("Skipping Good reputation; already rank 10 or higher.", "Info");
-        }
-        else
-        {
-            Core.Logger($"[PrereqClassesAndForge] Getting Good reputation to rank 10 (current rank: {goodRank})...", "Info");
-            GoodRep.ScriptMain(Bot);
-            Core.SetOptions();
-        }
-    }
-
-    public void GetForgeEnhancements()
-    {
-        Core.Logger("[PrereqClassesAndForge] Doing forge enhancements...", "Info");
+        Core.Logger("[PrereqMgr] Doing forge enhancements (including Hero's Valiance)...", "Info");
         Forge.ForgeUnlocks();
-    }
 
-    // ─── BOOST ITEM HANDLING ──────────────────────────────────────────
-
-    private void HandleBoostItems(bool autoEquip, bool farmMissing)
-    {
-        Core.Logger("[PrereqClassesAndForge] Checking for boost items...", "Info");
-
-        if (Bot.Bank.Items == null || Bot.Bank.Items.Count == 0)
+        // After ForgeUnlocks, check if Valiance is still missing and log a warning
+        if (!Adv.uValiance())
         {
-            Bot.Bank.Load();
-            Bot.Wait.ForTrue(() => (Bot.Bank.Items?.Count ?? 0) > 0, 20);
-        }
-
-        var allItems = GetAllItems();
-
-        var bestWeapon = FindBestWeapon(allItems);
-        bool hasWeapon = bestWeapon != null;
-
-        if (hasWeapon)
-        {
-            float raw = Core.GetBoostFloat(bestWeapon, "dmgAll");
-            float norm = NormaliseBoost(raw);
-            Core.Logger($"  ✅ Found weapon: {bestWeapon.Name} ({norm:P0} all damage)", "Info");
-            if (autoEquip)
-                EquipItem(bestWeapon);
+            Core.Logger("[PrereqMgr] Hero's Valiance not unlocked by ForgeUnlocks; may need manual unlocking.", "Warning");
         }
         else
         {
-            Core.Logger("  ❌ No 40%+ all-damage weapon found.", "Warning");
-            if (farmMissing)
-            {
-                Core.Logger("  → Farming Hollowborn Reaper's Scythe...", "Info");
-                EnsureLevel100();
-                HBS.ScriptMain(Bot);
-                allItems = GetAllItems();
-                bestWeapon = FindBestWeapon(allItems);
-                if (bestWeapon != null && autoEquip)
-                {
-                    Core.Logger($"  ✅ Farmed and equipping: {bestWeapon.Name}", "Info");
-                    EquipItem(bestWeapon);
-                }
-            }
+            Core.Logger("[PrereqMgr] Hero's Valiance successfully unlocked.", "Info");
         }
-
-        var bestBoostItem = FindBestArmorOrPet(allItems);
-        bool hasBoost = bestBoostItem != null;
-
-        if (hasBoost)
-        {
-            var normalisedBoosts = RaceKeys.Select(r => NormaliseBoost(Core.GetBoostFloat(bestBoostItem, r)));
-            var vals = RaceKeys.Zip(normalisedBoosts, (r, v) => $"{r}={v:P0}");
-            Core.Logger($"  ✅ Found boost item: {bestBoostItem.Name} ({string.Join(", ", vals)})", "Info");
-            if (autoEquip)
-                EquipItem(bestBoostItem);
-        }
-        else
-        {
-            Core.Logger("  ❌ No armor or pet with 30%+ all race boosts found.", "Warning");
-            if (farmMissing)
-            {
-                Core.Logger("  → Farming Polly Roger as fallback...", "Info");
-                CPC.ScriptMain(Bot);
-                allItems = GetAllItems();
-                bestBoostItem = FindBestArmorOrPet(allItems);
-                if (bestBoostItem != null && autoEquip)
-                {
-                    Core.Logger($"  ✅ Farmed and equipping: {bestBoostItem.Name}", "Info");
-                    EquipItem(bestBoostItem);
-                }
-            }
-        }
-
-        allItems = GetAllItems();
-        bool finalHasWeapon = FindBestWeapon(allItems) != null;
-        bool finalHasBoost = FindBestArmorOrPet(allItems) != null;
-
-        Core.Logger("[PrereqClassesAndForge] Boost item status:", "Info");
-        Core.Logger($"  • 40%+ weapon: {(finalHasWeapon ? "✅" : "❌")}", finalHasWeapon ? "Info" : "Warning");
-        Core.Logger($"  • 30%+ armor/pet: {(finalHasBoost ? "✅" : "❌")}", finalHasBoost ? "Info" : "Warning");
     }
+
+    // ─── BOOST ITEMS ──────────────────────────────────────────────────
 
     private List<InventoryItem> GetAllItems()
     {
@@ -517,7 +428,7 @@ public class PrereqClassesAndForge
     private InventoryItem? FindBestArmorOrPet(List<InventoryItem> items)
     {
         var candidates = items
-            .Where(i => i.Category == ItemCategory.Armor || 
+            .Where(i => i.Category == ItemCategory.Armor ||
                         (i.CategoryString?.Equals("Pet", StringComparison.OrdinalIgnoreCase) == true))
             .Select(i => new {
                 Item = i,
@@ -557,25 +468,215 @@ public class PrereqClassesAndForge
         int currentLevel = Bot.Player.Level;
         if (currentLevel >= 100)
         {
-            Core.Logger($"[PrereqClassesAndForge] Level {currentLevel} — already 100+.", "Info");
+            Core.Logger($"[PrereqMgr] Level {currentLevel} — already 100+.", "Info");
             return;
         }
 
-        Core.Logger($"[PrereqClassesAndForge] Level {currentLevel} — need 100. Farming XP...", "Warning");
+        Core.Logger($"[PrereqMgr] Level {currentLevel} — need 100. Farming XP...", "Warning");
         Farm.Experience(100);
         if (Bot.Player.Level < 100)
-            Core.Logger("[PrereqClassesAndForge] Failed to reach level 100. Scythe requires level 100.", "Error");
+            Core.Logger("[PrereqMgr] Failed to reach level 100. Scythe requires level 100.", "Error");
         else
-            Core.Logger($"[PrereqClassesAndForge] Successfully reached level {Bot.Player.Level}!", "Info");
+            Core.Logger($"[PrereqMgr] Successfully reached level {Bot.Player.Level}!", "Info");
     }
 
-    // ─── FINAL STATUS REPORT ──────────────────────────────────────────
+    // ─── PUBLIC BOOST METHODS ──────────────────────────────────────
 
-    private void ShowPostPrereqPrompt()
+    /// <summary>
+    /// Equips the best existing boost items (weapon and armor/pet) without farming.
+    /// </summary>
+    public void EquipBestBoostItems()
     {
-        bool autoEquip = Bot.Config!.Get<bool>("AutoEquipBoosts");
-        bool farmMissing = Bot.Config!.Get<bool>("FarmMissingBoosts");
+        if (Bot.Bank.Items == null || Bot.Bank.Items.Count == 0)
+        {
+            Bot.Bank.Load();
+            Bot.Wait.ForTrue(() => (Bot.Bank.Items?.Count ?? 0) > 0, 20);
+        }
 
+        var allItems = GetAllItems();
+
+        var weapon = FindBestWeapon(allItems);
+        if (weapon != null)
+        {
+            float norm = NormaliseBoost(Core.GetBoostFloat(weapon, "dmgAll"));
+            Core.Logger($"  ✅ Found weapon: {weapon.Name} (+{norm:P0} all damage) – equipping.", "Info");
+            EquipItem(weapon);
+        }
+        else
+        {
+            Core.Logger("  ❌ No 40%+ all‑damage weapon found (will farm later if enabled).", "Warning");
+        }
+
+        var armorPet = FindBestArmorOrPet(allItems);
+        if (armorPet != null)
+        {
+            var boosts = RaceKeys.Select(r => NormaliseBoost(Core.GetBoostFloat(armorPet, r)));
+            var vals = RaceKeys.Zip(boosts, (r, v) => $"{r}={v:P0}");
+            Core.Logger($"  ✅ Found armor/pet: {armorPet.Name} ({string.Join(", ", vals)}) – equipping.", "Info");
+            EquipItem(armorPet);
+        }
+        else
+        {
+            Core.Logger("  ❌ No 30%+ all‑race armor/pet found (will farm later if enabled).", "Warning");
+        }
+    }
+
+    /// <summary>
+    /// Farms missing boost items (Hollowborn Reaper's Scythe and/or Polly Roger) if needed.
+    /// </summary>
+    /// <param name="equipAfterFarming">If true, equips the newly farmed items.</param>
+    public void FarmMissingBoostItems(bool equipAfterFarming)
+    {
+        Core.Logger("[PrereqMgr] Farming missing boost items...", "Info");
+
+        if (Bot.Bank.Items == null || Bot.Bank.Items.Count == 0)
+        {
+            Bot.Bank.Load();
+            Bot.Wait.ForTrue(() => (Bot.Bank.Items?.Count ?? 0) > 0, 20);
+        }
+
+        var allItems = GetAllItems();
+
+        // Check weapon
+        var weapon = FindBestWeapon(allItems);
+        if (weapon == null)
+        {
+            Core.Logger("  → No 40%+ weapon found. Farming Hollowborn Reaper's Scythe...", "Info");
+            EnsureLevel100();
+            HBS.ScriptMain(Bot);
+            allItems = GetAllItems(); // refresh
+            weapon = FindBestWeapon(allItems);
+            if (weapon != null)
+            {
+                Core.Logger($"  ✅ Farmed: {weapon.Name} (+{NormaliseBoost(Core.GetBoostFloat(weapon, "dmgAll")):P0})", "Info");
+                if (equipAfterFarming)
+                    EquipItem(weapon);
+            }
+            else
+            {
+                Core.Logger("  ❌ Failed to farm a 40%+ weapon.", "Warning");
+            }
+        }
+        else
+        {
+            Core.Logger($"  ✅ Already have weapon: {weapon.Name} (+{NormaliseBoost(Core.GetBoostFloat(weapon, "dmgAll")):P0})", "Info");
+        }
+
+        // Check armor/pet
+        var armorPet = FindBestArmorOrPet(allItems);
+        if (armorPet == null)
+        {
+            Core.Logger("  → No 30%+ all‑race armor/pet found. Farming Polly Roger...", "Info");
+            CPC.ScriptMain(Bot);
+            allItems = GetAllItems(); // refresh
+            armorPet = FindBestArmorOrPet(allItems);
+            if (armorPet != null)
+            {
+                Core.Logger($"  ✅ Farmed: {armorPet.Name} (30%+ all races)", "Info");
+                if (equipAfterFarming)
+                    EquipItem(armorPet);
+            }
+            else
+            {
+                Core.Logger("  ❌ Failed to farm a 30%+ all‑race armor/pet.", "Warning");
+            }
+        }
+        else
+        {
+            Core.Logger($"  ✅ Already have armor/pet: {armorPet.Name}", "Info");
+        }
+    }
+
+    // ─── STATUS REPORTS ──────────────────────────────────────────────
+
+    public void PrintInitialStatus()
+    {
+        Core.Logger("─────────────────────────────────────────────", "Info");
+        Core.Logger("📋 INITIAL PREREQUISITE STATUS", "Info");
+        Core.Logger("─────────────────────────────────────────────", "Info");
+        PrintStatusSummary();
+    }
+
+    public void PrintFinalStatus()
+    {
+        Core.Logger("─────────────────────────────────────────────", "Info");
+        Core.Logger("✅ FINAL PREREQUISITE STATUS", "Info");
+        Core.Logger("─────────────────────────────────────────────", "Info");
+        PrintStatusSummary();
+        ShowFinalMessageBox();
+    }
+
+    private void PrintStatusSummary()
+    {
+        bool allOk = AllPrereqsComplete();
+
+        Core.Logger($"Overall Status: {(allOk ? "✅ ALL COMPLETE" : "❌ MISSING ITEMS")}", allOk ? "Info" : "Warning");
+
+        // Classes
+        foreach (string cls in RequiredClasses)
+        {
+            bool complete = IsClassComplete(cls);
+            Core.Logger($"  {(complete ? "✅" : "❌")} {cls}: rank 10" + (complete ? "" : " (missing/not rank 10)"), complete ? "Info" : "Warning");
+        }
+        bool looComplete = IsLordOfOrderComplete();
+        Core.Logger($"  {(looComplete ? "✅" : "❌")} Lord Of Order: rank 10" + (looComplete ? "" : " (in progress or missing)"), looComplete ? "Info" : "Warning");
+
+        // Reputations
+        int alchRank = ReputationRank("Alchemy");
+        bool alchOk = alchRank >= 8;
+        Core.Logger($"  {(alchOk ? "✅" : "❌")} Alchemy: rank {alchRank}" + (alchOk ? "" : " (need rank 8)"), alchOk ? "Info" : "Warning");
+
+        int goodRank = ReputationRank("Good");
+        bool goodOk = goodRank >= 10;
+        Core.Logger($"  {(goodOk ? "✅" : "❌")} Good: rank {goodRank}" + (goodOk ? "" : " (need rank 10)"), goodOk ? "Info" : "Warning");
+
+        // Forge & Awe
+        bool hasBoA = HasBladeOfAwe();
+        Core.Logger($"  {(hasBoA ? "✅" : "❌")} Blade of Awe (Awe enhancements)" + (hasBoA ? "" : " (missing)"), hasBoA ? "Info" : "Warning");
+
+        bool weaponsComplete = AreForgeWeaponsComplete();
+        Core.Logger($"  {(weaponsComplete ? "✅" : "❌")} Forge Weapon (Lacerate, Praxis, Valiance)" + (weaponsComplete ? "" : " (not fully unlocked)"), weaponsComplete ? "Info" : "Warning");
+
+        bool helmDone = Adv.uForgeHelm();
+        Core.Logger($"  {(helmDone ? "✅" : "❌")} Forge Helm (all tiers)" + (helmDone ? "" : " (not fully unlocked)"), helmDone ? "Info" : "Warning");
+
+        bool capeDone = Adv.uForgeCape();
+        Core.Logger($"  {(capeDone ? "✅" : "❌")} Forge Cape (all tiers)" + (capeDone ? "" : " (not fully unlocked)"), capeDone ? "Info" : "Warning");
+
+        // Level & Gold
+        bool hasLevel100 = Bot.Player.Level >= 100;
+        long gold = Bot.Player.Gold;
+        bool hasGold = gold >= 10_000_000;
+        Core.Logger($"  {(hasLevel100 ? "✅" : "❌")} Level 100: {Bot.Player.Level}" + (hasLevel100 ? "" : " / 100"), hasLevel100 ? "Info" : "Warning");
+        Core.Logger($"  {(hasGold ? "✅" : "❌")} Gold: {gold:N0} >= 10,000,000" + (hasGold ? "" : " (need 10M)"), hasGold ? "Info" : "Warning");
+
+        // Boost items (current state)
+        var allItems = GetAllItems();
+        var weapon = FindBestWeapon(allItems);
+        var armorPet = FindBestArmorOrPet(allItems);
+        bool hasWeapon = weapon != null;
+        bool hasArmorPet = armorPet != null;
+
+        string weaponStatus;
+        if (hasWeapon)
+        {
+            float boost = NormaliseBoost(Core.GetBoostFloat(weapon, "dmgAll"));
+            weaponStatus = $"{weapon.Name} (+{boost:P0})";
+        }
+        else
+        {
+            weaponStatus = "none found";
+        }
+        Core.Logger($"  {(hasWeapon ? "✅" : "❌")} Weapon: {weaponStatus}", hasWeapon ? "Info" : "Warning");
+
+        string armorStatus = hasArmorPet ? $"{armorPet.Name} (30%+ all races)" : "none found";
+        Core.Logger($"  {(hasArmorPet ? "✅" : "❌")} Armor/Pet: {armorStatus}", hasArmorPet ? "Info" : "Warning");
+
+        Core.Logger("─────────────────────────────────────────────", "Info");
+    }
+
+    private void ShowFinalMessageBox()
+    {
         var allItems = GetAllItems();
         var weapon = FindBestWeapon(allItems);
         var armorPet = FindBestArmorOrPet(allItems);
@@ -584,8 +685,6 @@ public class PrereqClassesAndForge
         bool hasLevel100 = Bot.Player.Level >= 100;
         long gold = Bot.Player.Gold;
         bool hasGold = gold >= 10_000_000;
-
-        string ign = Core.Username();
 
         float weaponBoost = hasWeapon ? NormaliseBoost(Core.GetBoostFloat(weapon, "dmgAll")) : 0f;
 
@@ -610,60 +709,12 @@ public class PrereqClassesAndForge
         if (canComputeTotal)
             totalBoost = (1 + weaponBoost) * (1 + armorBoost) - 1;
 
-        Core.Logger("", "Info");
-        Core.Logger($"Report for: {ign}", "Info");
-        Core.Logger("════════════════════════════════════════════════════════════════════════", "Info");
-        Core.Logger("PREREQUISITE          STATUS     DETAIL", "Info");
-        Core.Logger("────────────────────────────────────────────────────────────────────────", "Info");
-
-        Core.Logger($"{"Gold",-22} {(hasGold ? "✅" : "❌"),-8} {gold:N0} >= 10,000,000", hasGold ? "Info" : "Warning");
-        Core.Logger($"{"Level 100",-22} {(hasLevel100 ? "✅" : "❌"),-8} {Bot.Player.Level} / 100", hasLevel100 ? "Info" : "Warning");
-
-        if (hasWeapon)
-            Core.Logger($"{"Weapon",-22} {"✅",-8} +{weaponBoost:P0} {weapon.Name}", "Info");
-        else
-            Core.Logger($"{"Weapon",-22} {"❌",-8} None", "Warning");
-
-        if (hasArmorPet)
-        {
-            string boostDisplay = uniformBoost ? $"+{armorBoost:P0}" : "(varied)";
-            Core.Logger($"{armorPetType,-22} {"✅",-8} {boostDisplay} {armorPetName} ({raceBoostsStr})", "Info");
-        }
-        else
-            Core.Logger($"{"Armor/Pet",-22} {"❌",-8} None", "Warning");
-
-        if (canComputeTotal)
-            Core.Logger($"{"Total Boost",-22} {"",-8} +{totalBoost:P0} (multiplicative: {weaponBoost:P0} × {armorBoost:P0})", "Info");
-        else if (hasWeapon && hasArmorPet && !uniformBoost)
-            Core.Logger($"{"Total Boost",-22} {"",-8} varies by race – see above", "Info");
-        else
-            Core.Logger($"{"Total Boost",-22} {"",-8} N/A (missing item)", "Info");
-
-        Core.Logger("────────────────────────────────────────────────────────────────────────", "Info");
-        Core.Logger($"AutoEquipBoosts:      {(autoEquip ? "✅ ENABLED" : "❌ DISABLED")}", "Info");
-        Core.Logger($"FarmMissingBoosts:    {(farmMissing ? "✅ ENABLED" : "❌ DISABLED")}", "Info");
-        Core.Logger("════════════════════════════════════════════════════════════════════════", "Info");
-
-        if (!hasGold || !hasLevel100 || !hasWeapon || !hasArmorPet)
-        {
-            Core.Logger("⚠️  RECOMMENDED ACTIONS:", "Warning");
-            if (!hasGold) Core.Logger("  • Run ArmyPrismata.cs (gold)", "Info");
-            if (!hasLevel100 && !farmMissing) Core.Logger("  • Enable FarmMissingBoosts or farm XP manually", "Info");
-            if (!hasWeapon) Core.Logger("  • Run HollowbornReapersScythe.cs", "Info");
-            if (!hasArmorPet) Core.Logger("  • Run CelestialPirateCommander[PollyRogers].cs", "Info");
-        }
-        else
-            Core.Logger("🎉 All prerequisites complete – ready for Ultras v3!", "Info");
-
-        Core.Logger("", "Info");
-
-        // ─── MESSAGE BOX ──────────────────────────────────────────────
+        string ign = Core.Username();
 
         var sb = new StringBuilder();
-        sb.AppendLine($"✅ ULTRAS‑V3 PREREQUISITE STATUS – {ign}");
+        sb.AppendLine($"✅ ULTRAS PREREQUISITE STATUS – {ign}");
         sb.AppendLine();
 
-        // Classes
         sb.AppendLine("📚 CLASSES:");
         foreach (string cls in RequiredClasses)
         {
@@ -674,37 +725,34 @@ public class PrereqClassesAndForge
         sb.AppendLine($"  {(looComplete ? "✅" : "❌")} Lord Of Order: rank 10" + (looComplete ? "" : " (needs rank 10)"));
         sb.AppendLine();
 
-        // Reputations
         sb.AppendLine("📈 REPUTATIONS:");
         int alchRank = ReputationRank("Alchemy");
         bool alchOk = alchRank >= 8;
         sb.AppendLine($"  {(alchOk ? "✅" : "❌")} Alchemy: rank {alchRank}" + (alchOk ? "" : " (need rank 8)"));
-
         int goodRank = ReputationRank("Good");
         bool goodOk = goodRank >= 10;
         sb.AppendLine($"  {(goodOk ? "✅" : "❌")} Good: rank {goodRank}" + (goodOk ? "" : " (need rank 10)"));
         sb.AppendLine();
 
-        // Forge & Awe
         sb.AppendLine("🔧 FORGE & AWE:");
         bool hasBoA = HasBladeOfAwe();
-        sb.AppendLine($"  {(hasBoA ? "✅" : "❌")} Blade of Awe (unlocks Awe enhancements)" + (hasBoA ? "" : " (needs farming)"));
+        sb.AppendLine($"  {(hasBoA ? "✅" : "❌")} Blade of Awe (Awe enhancements)" + (hasBoA ? "" : " (needs farming)"));
 
-        bool weaponDone = Adv.uLacerate() && Adv.uPraxis();
-        sb.AppendLine($"  {(weaponDone ? "✅" : "❌")} Weapon: Lacerate & Praxis" + (weaponDone ? "" : " (not fully unlocked)"));
+        bool weaponsComplete = AreForgeWeaponsComplete();
+        sb.AppendLine($"  {(weaponsComplete ? "✅" : "❌")} Weapon: Lacerate, Praxis, Valiance" + (weaponsComplete ? "" : " (not fully unlocked)"));
+
         bool helmDone = Adv.uForgeHelm();
         sb.AppendLine($"  {(helmDone ? "✅" : "❌")} Helm: all tiers" + (helmDone ? "" : " (not fully unlocked)"));
+
         bool capeDone = Adv.uForgeCape();
         sb.AppendLine($"  {(capeDone ? "✅" : "❌")} Cape: all tiers" + (capeDone ? "" : " (not fully unlocked)"));
         sb.AppendLine();
 
-        // Level & Gold
         sb.AppendLine("💰 LEVEL & GOLD:");
         sb.AppendLine($"  {(hasLevel100 ? "✅" : "❌")} Level 100: {Bot.Player.Level}" + (hasLevel100 ? "" : " / 100"));
         sb.AppendLine($"  {(hasGold ? "✅" : "❌")} Gold: {gold:N0} >= 10,000,000" + (hasGold ? "" : " (need 10M)"));
         sb.AppendLine();
 
-        // Boost items
         sb.AppendLine("⚔️ BOOST ITEMS:");
         if (hasWeapon)
             sb.AppendLine($"  ✅ Weapon: {weapon.Name} (+{weaponBoost:P0} all)");
@@ -721,21 +769,23 @@ public class PrereqClassesAndForge
         sb.AppendLine();
 
         sb.AppendLine($"⚙️  CONFIG:");
+        bool autoEquip = Bot.Config!.Get<bool>("AutoEquipBoosts");
+        bool farmMissing = Bot.Config!.Get<bool>("FarmMissingBoosts");
         sb.AppendLine($"  • AutoEquipBoosts:    {(autoEquip ? "✅" : "❌")}");
-        sb.AppendLine($"  • FarmMissingBoosts:  {(farmMissing ? "✅" : "❌")}");
+        sb.AppendLine($"  • FarmMissingBoosts:  {(farmMissing ? "✅" : "❌")} (farms at the end if needed)");
         sb.AppendLine();
 
-        if (!hasGold || !hasLevel100 || !hasWeapon || !hasArmorPet)
+        if (!hasGold || !hasLevel100 || !hasWeapon || !hasArmorPet || !weaponsComplete)
         {
             sb.AppendLine("🔧 RECOMMENDED ACTIONS:");
             if (!hasGold) sb.AppendLine("  • Run ArmyPrismata.cs (gold)");
             if (!hasLevel100 && !farmMissing) sb.AppendLine("  • Enable FarmMissingBoosts or farm XP");
-            if (!hasWeapon) sb.AppendLine("  • Run HollowbornReapersScythe.cs");
-            if (!hasArmorPet) sb.AppendLine("  • Run CelestialPirateCommander[PollyRogers].cs");
+            if (!hasWeapon) sb.AppendLine("  • Run HollowbornReapersScythe.cs (or enable FarmMissingBoosts)");
+            if (!hasArmorPet) sb.AppendLine("  • Run CelestialPirateCommander[PollyRogers].cs (or enable FarmMissingBoosts)");
+            if (!weaponsComplete) sb.AppendLine("  • Unlock Lacerate, Praxis, and Hero's Valiance (forge progression)");
         }
         else
-            sb.AppendLine("🎉 All good – proceed to Ultras v3!");
-
-        Bot.ShowMessageBox(sb.ToString(), "Ultras-v3 Prerequisites");
+            sb.AppendLine("🎉 All good – proceed to Ultras!");
+        Bot.ShowMessageBox(sb.ToString(), "Ultras Prerequisites (Joe Flow)");
     }
 }
